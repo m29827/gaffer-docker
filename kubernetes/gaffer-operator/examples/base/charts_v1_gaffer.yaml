@@ -1,0 +1,397 @@
+apiVersion: charts.gaffer.gchq.gov.uk/v1
+kind: Gaffer
+metadata:
+  name: gaffer-sample
+spec:
+  # Default values copied from <project_dir>/helm-charts/gaffer/values.yaml
+  accumulo:
+    cmds:
+      affinity: {}
+      nodeSelector: {}
+      resources: {}
+      tolerations: []
+    config:
+      accumuloSite:
+        instance.secret: ""
+        tserver.cache.data.size: 15M
+        tserver.cache.index.size: 40M
+        tserver.memory.maps.max: 128M
+        tserver.memory.maps.native.enabled: true
+        tserver.sort.buffer.size: 50M
+        tserver.total.mutation.queue.max: 16M
+        tserver.walog.max.size: 128M
+      files: {}
+      path: /etc/accumulo/conf
+      postInstallCommands:
+      - users
+      - userpermissions -u gaffer
+      - getauths -u gaffer
+      userManagement:
+        revoke:
+          enabled: true
+        rootPassword: ""
+        users:
+          gaffer:
+            auths: []
+            password: ""
+            permissions:
+              system:
+              - CREATE_TABLE
+              table:
+                simpleGraph:
+                - READ
+                - WRITE
+                - BULK_IMPORT
+                - ALTER_TABLE
+          tracer:
+            password: ""
+            permissions:
+              system:
+              - CREATE_TABLE
+              table:
+                trace:
+                - READ
+                - WRITE
+    gc:
+      affinity: {}
+      nodeSelector: {}
+      replicaCount: 1
+      resources: {}
+      tolerations: []
+    image:
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+      repository: gchq/gaffer
+      tag: 1.12.0
+    instanceId: accumulo
+    master:
+      affinity: {}
+      nodeSelector: {}
+      resources: {}
+      tolerations: []
+    monitor:
+      affinity: {}
+      ingress:
+        annotations:
+          traefik.ingress.kubernetes.io/rule-type: PathPrefixStrip
+        enabled: true
+        host: ""
+        pathPrefix: /accumulo/(.*)
+      nodeSelector: {}
+      replicaCount: 1
+      resources: {}
+      tolerations: []
+    tabletServers:
+      affinity: {}
+      nodeSelector: {}
+      replicaCount: 3
+      resources: {}
+      tolerations: []
+  api:
+    affinity: {}
+    image:
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+      repository: gchq/gaffer-rest
+      tag: 1.12.0
+    ingress:
+      annotations:
+        traefik.ingress.kubernetes.io/rule-type: PathPrefixStrip
+      host: ""
+      pathPrefix: /gaffer/(.*)
+    nodeSelector: {}
+    replicaCount: 1
+    resources: {}
+    tolerations: []
+    user: gaffer
+  fullnameOverride: ""
+  graph:
+    config:
+      description: A graph for demo purposes
+      graphId: simpleGraph
+      hooks: []
+    schema: {}
+    storeProperties:
+      gaffer.cache.service.class: uk.gov.gchq.gaffer.cache.impl.HashMapCacheService
+      gaffer.store.job.tracker.enabled: true
+  hdfs:
+    alpine:
+      imagePullPolicy: IfNotPresent
+      repository: alpine
+      tag: 3.10.2
+    config:
+      coreSite: {}
+      hdfsSite:
+        dfs.datanode.synconclose: true
+        dfs.replication: 3
+        hadoop.security.authorization: true
+      path: /etc/hadoop/conf
+    datanode:
+      affinity: {}
+      dataVolumes:
+        count: 2
+        size: 10Gi
+        storageClassName: ""
+      imagePullPolicy: IfNotPresent
+      imagePullSecrets: []
+      nodeCount: 3
+      nodeSelector: {}
+      ports:
+        data: 9866
+        http: 9864
+        https: 9865
+        ipc: 9867
+      repository: gchq/hdfs
+      resources: {}
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      tag: 3.2.1
+      tolerations: []
+    enabled: true
+    fullnameOverride: ""
+    global: {}
+    ingress:
+      annotations:
+        traefik.ingress.kubernetes.io/rule-type: PathPrefixStrip
+      enabled: true
+      host: ""
+      pathPrefix: /hdfs/(.*)
+    nameOverride: ""
+    namenode:
+      affinity: {}
+      dataVolumes:
+        count: 1
+        size: 10Gi
+        storageClassName: ""
+      hostname: ""
+      imagePullPolicy: IfNotPresent
+      imagePullSecrets: []
+      nodeSelector: {}
+      ports:
+        clientRpc: 8020
+        http: 9870
+        https: 9871
+        lifelineRpc: 8022
+        serviceRpc: 8021
+      repository: gchq/hdfs
+      resources: {}
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      tag: 3.2.1
+      tolerations: []
+    postInstallCommands:
+    - hadoop fs -mkdir -p /accumulo
+    - hadoop fs -chown accumulo /accumulo
+    - hadoop fs -chmod 700 /accumulo
+    - hadoop fs -ls /
+    secrets:
+      files: {}
+      path: /etc/hadoop/secrets
+    shell:
+      affinity: {}
+      enabled: true
+      imagePullPolicy: IfNotPresent
+      imagePullSecrets: []
+      nodeSelector: {}
+      repository: gchq/hdfs
+      resources: {}
+      tag: 3.2.1
+      tolerations: []
+    volumes:
+    - /accumulo
+  nameOverride: ""
+  testImages:
+    curl:
+      repository: curlimages/curl
+      tag: 7.67.0
+    operationRunner:
+      repository: gchq/gaffer-operation-runner
+      tag: 1.12.0
+  ui: '{}'
+  waitFor:
+    graphStatusOk: true
+  zookeeper:
+    affinity: {}
+    command:
+    - /bin/bash
+    - -xec
+    - /config-scripts/run
+    enabled: true
+    env:
+      JMXAUTH: "false"
+      JMXDISABLE: "false"
+      JMXPORT: 1099
+      JMXSSL: "false"
+      ZK_SYNC_LIMIT: 10
+      ZK_TICK_TIME: 2000
+      ZOO_AUTOPURGE_PURGEINTERVAL: 0
+      ZOO_AUTOPURGE_SNAPRETAINCOUNT: 3
+      ZOO_INIT_LIMIT: 5
+      ZOO_MAX_CLIENT_CNXNS: 60
+      ZOO_PORT: 2181
+      ZOO_STANDALONE_ENABLED: false
+      ZOO_TICK_TIME: 2000
+    exporters:
+      jmx:
+        config:
+          lowercaseOutputName: false
+          rules:
+          - name: zookeeper_$2
+            pattern: org.apache.ZooKeeperService<name0=ReplicatedServer_id(\d+)><>(\w+)
+          - labels:
+              replicaId: $2
+            name: zookeeper_$3
+            pattern: org.apache.ZooKeeperService<name0=ReplicatedServer_id(\d+), name1=replica.(\d+)><>(\w+)
+          - labels:
+              memberType: $3
+              replicaId: $2
+            name: zookeeper_$4
+            pattern: org.apache.ZooKeeperService<name0=ReplicatedServer_id(\d+), name1=replica.(\d+), name2=(\w+)><>(\w+)
+          - labels:
+              memberType: $3
+              replicaId: $2
+            name: zookeeper_$4_$5
+            pattern: org.apache.ZooKeeperService<name0=ReplicatedServer_id(\d+), name1=replica.(\d+), name2=(\w+), name3=(\w+)><>(\w+)
+          startDelaySeconds: 30
+        enabled: false
+        env: {}
+        image:
+          pullPolicy: IfNotPresent
+          repository: sscaling/jmx-prometheus-exporter
+          tag: 0.3.0
+        livenessProbe:
+          failureThreshold: 8
+          httpGet:
+            path: /metrics
+            port: jmxxp
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 60
+        path: /metrics
+        ports:
+          jmxxp:
+            containerPort: 9404
+            protocol: TCP
+        readinessProbe:
+          failureThreshold: 8
+          httpGet:
+            path: /metrics
+            port: jmxxp
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 60
+        resources: {}
+        serviceMonitor:
+          interval: 30s
+          scheme: http
+          scrapeTimeout: 30s
+      zookeeper:
+        config:
+          logLevel: info
+          resetOnScrape: "true"
+        enabled: false
+        env: {}
+        image:
+          pullPolicy: IfNotPresent
+          repository: josdotso/zookeeper-exporter
+          tag: v1.1.2
+        livenessProbe:
+          failureThreshold: 8
+          httpGet:
+            path: /metrics
+            port: zookeeperxp
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 60
+        path: /metrics
+        ports:
+          zookeeperxp:
+            containerPort: 9141
+            protocol: TCP
+        readinessProbe:
+          failureThreshold: 8
+          httpGet:
+            path: /metrics
+            port: zookeeperxp
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 60
+        resources: {}
+        serviceMonitor:
+          interval: 30s
+          scheme: http
+          scrapeTimeout: 30s
+    externalHosts: ""
+    global: {}
+    headless:
+      annotations: {}
+      publishNotReadyAddresses: false
+    image:
+      pullPolicy: IfNotPresent
+      repository: zookeeper
+      tag: 3.5.5
+    jobs:
+      chroots:
+        activeDeadlineSeconds: 300
+        backoffLimit: 5
+        completions: 1
+        config:
+          create: []
+        enabled: false
+        env: []
+        parallelism: 1
+        resources: {}
+        restartPolicy: Never
+    nodeSelector: {}
+    persistence:
+      accessMode: ReadWriteOnce
+      enabled: true
+      size: 5Gi
+    podAnnotations: {}
+    podDisruptionBudget:
+      maxUnavailable: 1
+    podLabels: {}
+    ports:
+      client:
+        containerPort: 2181
+        protocol: TCP
+      election:
+        containerPort: 3888
+        protocol: TCP
+      server:
+        containerPort: 2888
+        protocol: TCP
+    priorityClassName: ""
+    prometheus:
+      serviceMonitor:
+        enabled: false
+        selector: {}
+    replicaCount: 1
+    resources: {}
+    securityContext:
+      fsGroup: 1000
+      runAsUser: 1000
+    service:
+      annotations: {}
+      ports:
+        client:
+          port: 2181
+          protocol: TCP
+          targetPort: client
+      type: ClusterIP
+    terminationGracePeriodSeconds: 1800
+    tolerations: []
+    updateStrategy:
+      type: RollingUpdate
+  
+  
