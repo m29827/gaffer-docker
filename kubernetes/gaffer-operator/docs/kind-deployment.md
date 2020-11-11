@@ -1,49 +1,37 @@
-#!/bin/bash
+# Building and deploying the Gaffer Operator in kind
 
-# Copyright 2020 Crown Copyright
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+## Pre-requisite Utilities
+Installation of the Operator SDK (https://sdk.operatorframework.io) and Operator Package Manager (https://github.com/operator-framework/operator-registry) utilities are required to build and package the Gaffer Operator.
 
-Provision a kind cluster with access to a local docker repository:
-
+## Local Docker Repository Configuration
+To generate and use Operator Lifecycle Manager components access to a docker repository is required, the settings below can be used for local testing use:
 ```bash
-./scripts/kind-with-registry.sh
+export DOCKER_REGISTRY_PORT=5000
+export DOCKER_REGISTRY="localhost:${DOCKER_REGISTRY_PORT}"
 ```
 
+## Create kind cluster
+Provision a kind cluster with access to a local docker repository:
+```bash
+./scripts/kind-with-registry.sh "kind-registry" "${DOCKER_REGISTRY_PORT}"
+```
 Then follow the [instructions here](../../docs/kind-deployment.md), excluding the step already performed to provision the kind cluster.
 
-To generate and use Operator Lifecycle Manager components access to a docker repository is required, for local testing use:
-
-```bash
-export DOCKER_REPO="localhost:5000"
-```
-
+## Build and Package Gaffer Operator
 Generate and publish the gaffer helm operator artifacts using this script:
-
 ```bash
-./scripts/generate-helm-operator.sh "${DOCKER_REPO}"
+./scripts/generate-helm-operator.sh "${DOCKER_REGISTRY}"
 ```
 
-Install Operator Lifecycle Manager:
-
+## Install Operator Lifecycle Manager:
 ```bash
 operator-sdk olm install
 ```
 
+## Configure Operator Lifecycle Manager
 Create a Catalog Source which points to the operator index image, an operator group and subscription:
-
 ```bash
-OPERATOR_INDEX_IMAGE="${DOCKER_REPO}/gchq/gaffer/gaffer-operator-index:${GAFFER_VERSION}"
+OPERATOR_INDEX_IMAGE="${DOCKER_REGISTRY}/gchq/gaffer/gaffer-operator-index:${GAFFER_VERSION}"
 
 kubectl apply -f - << EOF
 apiVersion: operators.coreos.com/v1alpha1
@@ -81,14 +69,12 @@ spec:
 EOF
 ```
 
-Deploy a graph using the examples:
-
+## Deploy a graph using the examples:
 ```bash
 ./generated/gaffer-operator/bin/kustomize build ./examples/overlays | kubectl apply -f -
 ```
 
-Undeploy the graph:
-
+## Undeploy graph:
 ```bash
 ./generated/gaffer-operator/bin/kustomize build ./examples/overlays | kubectl delete -f -
 ```

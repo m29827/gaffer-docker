@@ -16,15 +16,19 @@
 
 set -o errexit
 
-# create registry container unless it already exists
-reg_name='kind-registry'
-reg_port='5000'
-running="$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
-if [ "${running}" != 'true' ]; then
-  docker run \
-    -d --restart=always -p "${reg_port}:5000" --name "${reg_name}" \
-    registry:2
-fi
+function usage() {
+    echo "Usage: ${0} <registry_name> <registry_port>" && exit 1
+}
+
+REGISTRY_NAME="${1}"
+REGISTRY_PORT="${2}"
+[[ "x${REGISTRY_NAME}" == "x" || "x${REGISTRY_PORT}" == "x" ]] && {
+    usage
+}
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd )
+source "${SCRIPT_DIR}/local-registry.sh"
+start_local_registry ${REGISTRY_NAME} ${REGISTRY_PORT}
 
 # create a cluster with the local registry enabled in containerd
 cat <<EOF | kind create cluster --config=-
@@ -32,13 +36,13 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 containerdConfigPatches:
 - |-
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:${reg_port}"]
-    endpoint = ["http://${reg_name}:${reg_port}"]
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:${REGISTRY_PORT}"]
+    endpoint = ["http://${REGISTRY_NAME}:${REGISTRY_PORT}"]
 EOF
 
 # connect the registry to the cluster network
 # (the network may already be connected)
-docker network connect "kind" "${reg_name}" || true
+docker network connect "kind" "${REGISTRY_NAME}" || true
 
 # Document the local registry
 # https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry
@@ -50,7 +54,7 @@ metadata:
   namespace: kube-public
 data:
   localRegistryHosting.v1: |
-    host: "localhost:${reg_port}"
+    host: "localhost:${REGISTRY_PORT}"
     help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
 EOF
 

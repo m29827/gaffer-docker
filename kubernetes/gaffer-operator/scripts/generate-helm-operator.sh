@@ -17,13 +17,12 @@
 set -e
 
 function usage() {
-    echo "${0} <docker_repo>"
-    exit 0
+    echo "Usage: ${0} <docker_registry>" && exit 1
 }
 
 # Gets project root directory 
 function getRootDirectory() {
-    echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../.." >/dev/null 2>&1 && pwd )"
+    echo "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." >/dev/null 2>&1 && pwd)"
 }
 
 function init_project() {
@@ -166,24 +165,17 @@ function build_and_push_operator_index() {
     docker push ${OPERATOR_INDEX_IMAGE}
 }
 
-function start_local_registry() {
-    reg_name='kind-registry'
-    reg_port='5000'
-    echo "Starting local registry: ${reg_name}:${reg_port}"
-    running="$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
-    if [ "${running}" != 'true' ]; then
-      docker run \
-        -d --restart=always -p "${reg_port}:5000" --name "${reg_name}" \
-        registry:2
-    fi
-}
 
-DOCKER_REPO="${1}"
 
-[[ "x${DOCKER_REPO}" == "x" ]] && {
+[[ $(which opm 2>/dev/null) && $(which operator-sdk 2>/dev/null) ]] || {
+    echo "Installation of the Operator SDK and Operator Package Manager (opm) are required, see https://sdk.operatorframework.io and https://github.com/operator-framework/operator-registry"
     usage
 }
 
+DOCKER_REGISTRY="${1}"
+[[ "x${DOCKER_REGISTRY}" == "x" ]] && {
+    usage
+}
 
 # Retrieve versions from files
 ROOT_DIR="$(getRootDirectory)"
@@ -194,6 +186,9 @@ APP_VERSION="$(cat ${ROOT_DIR}/app_version)"
 # GAFFER_VERSION
 # ACCUMULO_VERSION
 source "${ROOT_DIR}"/docker/gaffer/.env
+
+# Import function to start a local docker registry
+source "${ROOT_DIR}/kubernetes/gaffer-operator/scripts/local-registry.sh"
 
 OPERATOR_NAME="gaffer-operator"
 OPERATOR_BUILD_DIR="${ROOT_DIR}/kubernetes/${OPERATOR_NAME}/generated/${OPERATOR_NAME}"
@@ -208,7 +203,7 @@ OPERATOR_IMAGE="${OPERATOR_REPOSITORY}:${GAFFER_VERSION}"
 OPERATOR_BUNDLE_IMAGE="${OPERATOR_BUNDLE_REPOSITORY}:${GAFFER_VERSION}"
 OPERATOR_INDEX_IMAGE="${OPERATOR_INDEX_REPOSITORY}:${GAFFER_VERSION}"
 
-[[ ${DOCKER_REPO} =~ localhost:\d+$ ]] && start_local_registry
+[[ ${DOCKER_REGISTRY} =~ localhost:([[:digit:]]+)$ ]] && start_local_registry "kind-registry" ${BASH_REMATCH[1]}
 
 init_project
 init_kustomize
@@ -216,4 +211,3 @@ init_kustomize
 build_and_push_operator
 build_and_push_operator_bundle
 build_and_push_operator_index
-
