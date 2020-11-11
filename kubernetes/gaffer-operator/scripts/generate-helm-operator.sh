@@ -137,13 +137,15 @@ spec:
   keywords:
   - gaffer
   - operator
+  - graph
+  - deployment
   links:
   - name: Gaffer Operator
-    url: https://gaffer-operator.domain
+    url: https://gchq.github.io/gaffer-docker/kubernetes/gaffer-operator
   maturity: alpha
   provider:
-    name: provide
-    url: url
+    name: GCHQ
+    url: http://www.gchq.gov.uk
   version: ${GAFFER_VERSION}
 EOF
 
@@ -195,7 +197,7 @@ OPERATOR_BUILD_DIR="${ROOT_DIR}/kubernetes/${OPERATOR_NAME}/generated/${OPERATOR
 mkdir -p ${OPERATOR_BUILD_DIR}
 
 DOCKER_IMAGE_DOMAIN="gchq/gaffer"
-OPERATOR_REPOSITORY="${DOCKER_REPO}/${DOCKER_IMAGE_DOMAIN}/${OPERATOR_NAME}"
+OPERATOR_REPOSITORY="${DOCKER_REGISTRY}/${DOCKER_IMAGE_DOMAIN}/${OPERATOR_NAME}"
 OPERATOR_BUNDLE_REPOSITORY="${OPERATOR_REPOSITORY}-bundle"
 OPERATOR_INDEX_REPOSITORY="${OPERATOR_REPOSITORY}-index"
 
