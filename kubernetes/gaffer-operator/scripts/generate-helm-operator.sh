@@ -39,13 +39,11 @@ function init_project() {
 }
 
 function init_kustomize() {
-
     cd ${OPERATOR_BUILD_DIR} && make kustomize
 }
 
 function build_and_push_operator() {
-
-    # Configure additional permissions
+    # Configure additional permissions for the operator
     cat >> ${OPERATOR_BUILD_DIR}/config/rbac/role.yaml <<- EOF
 - apiGroups: ["networking.k8s.io"]
   resources:
@@ -79,7 +77,6 @@ EOF
 
 
 function build_and_push_operator_bundle() {
-
     # Supply a pre-configured ClusterServiceVersion file to avoid interactive prompting
     mkdir -p ${OPERATOR_BUILD_DIR}/config/manifests/bases
     cat >> ${OPERATOR_BUILD_DIR}/config/manifests/bases/${OPERATOR_NAME}.clusterserviceversion.yaml <<- EOF
@@ -149,9 +146,15 @@ spec:
   version: ${GAFFER_VERSION}
 EOF
 
+    cat > ${OPERATOR_BUILD_DIR}/config/samples/kustomization.yaml <<- EOF
+resources:
+- charts_v1_gaffer.yaml
+EOF
+
     cat >> ${OPERATOR_BUILD_DIR}/config/manifests/kustomization.yaml <<- EOF
 resources:
 - ../default
+- ../samples
 - ../scorecard
 EOF
 
@@ -166,8 +169,6 @@ function build_and_push_operator_index() {
     opm index add -c docker --bundles "${OPERATOR_BUNDLE_IMAGE}" --tag "${OPERATOR_INDEX_IMAGE}"
     docker push ${OPERATOR_INDEX_IMAGE}
 }
-
-
 
 [[ $(which opm 2>/dev/null) && $(which operator-sdk 2>/dev/null) ]] || {
     echo "Installation of the Operator SDK and Operator Package Manager (opm) are required, see https://sdk.operatorframework.io and https://github.com/operator-framework/operator-registry"

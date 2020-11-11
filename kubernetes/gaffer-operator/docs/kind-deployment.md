@@ -71,10 +71,10 @@ EOF
 
 ## Deploy a graph using the examples:
 ```bash
-./generated/gaffer-operator/bin/kustomize build ./examples/overlays | kubectl apply -f -
+kubectl apply -f examples/insecure_values.yaml
 ```
 
 ## Undeploy graph:
 ```bash
-./generated/gaffer-operator/bin/kustomize build ./examples/overlays | kubectl delete -f -
+kubectl delete -f examples/insecure_values.yaml
 ```
